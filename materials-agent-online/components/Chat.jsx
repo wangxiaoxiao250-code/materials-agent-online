@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import "../styles/globals.css";
 
 export default function Chat() {
   const [messages, setMessages] = useState([
