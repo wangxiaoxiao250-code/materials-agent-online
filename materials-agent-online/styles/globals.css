@@ -1,0 +1,6 @@
+body { font-family: Inter, Arial, sans-serif; margin: 0; padding: 20px; background: #f5f7fb; color: #222; }
+.app-shell { max-width: 900px; margin: 24px auto; }
+.chat-box { border: 1px solid #e6e9ef; border-radius: 10px; padding: 14px; background: white; }
+.message.user { text-align: right; }
+.message.assistant { text-align: left; }
+input, button { font-size: 14px; }
