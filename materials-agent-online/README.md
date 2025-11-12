@@ -26,3 +26,4 @@ This is a Next.js demo project that implements:
 - `knowledge/kb.json` - example knowledge base
 
 欢迎使用 “材料与化工智能助理” 演示项目。
+update
