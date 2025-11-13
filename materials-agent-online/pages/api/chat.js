@@ -13,15 +13,20 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).end();
   }
+
   try {
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages 必须为非空数组' });
     }
+
+    // 合并 system prompt
     const messagesForAI = [
       { role: 'system', content: system_prompt },
       ...messages
     ];
+
+    // 调用 iFlow API（OpenAI 兼容）
     const response = await fetch(`${API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -34,10 +39,27 @@ export default async function handler(req, res) {
         temperature: 0.7
       })
     });
+
+    // 如果上游报错，完整返回错误信息
+    if (!response.ok) {
+      const text = await response.text();
+      return res.status(500).send(`上游 iFlow API 错误：${text}`);
+    }
+
     const data = await response.json();
+
+    // 提取模型回复
+    const reply = data?.choices?.[0]?.message?.content;
+    if (!reply) {
+      return res.status(500).send("iFlow 返回为空，没有找到 reply");
+    }
+
+    // 重点：直接返回字符串（你的前端才能显示）
     return res.status(200).send(reply);
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Failed to call iFlow API' });
   }
 }
+
