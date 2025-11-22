@@ -15,29 +15,31 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // 没有配置 key 的情况直接报错，避免上游一堆奇怪错误
+  // 如果没配 key，直接给出清晰提示，但依然返回 200，避免前端 axios 抛错
   if (!API_KEY) {
-    return res.status(500).json({ error: 'IFLOW_API_KEY 未配置' });
+    return res
+      .status(200)
+      .json({ reply: '后端配置错误：未找到 IFLOW_API_KEY，请在 Vercel 环境变量中添加。' });
   }
 
   try {
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'messages 必须为非空数组' });
+      return res
+        .status(200)
+        .json({ reply: '请求格式错误：messages 必须为非空数组。' });
     }
 
-    // 合并 system prompt
     const messagesForAI = [
       { role: 'system', content: system_prompt },
-      ...messages
+      ...messages,
     ];
 
-    // 调用 iFlow API（OpenAI 兼容）
     const response = await fetch(`${API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         model: MODEL,
@@ -46,27 +48,32 @@ export default async function handler(req, res) {
       }),
     });
 
-    // 如果上游报错，完整返回错误信息，方便你在 Vercel Logs 里看
+    // ✅ 关键：即使 iFlow 返回错误，也不要给前端 500，而是把错误当成普通回复返回
     if (!response.ok) {
       const text = await response.text();
-      console.error('iFlow API error:', text);
-      return res.status(500).json({ error: `上游 iFlow API 错误：${text}` });
+      console.error('iFlow API error:', response.status, text);
+      return res.status(200).json({
+        reply: `调用 iFlow API 失败，状态码 ${response.status}。\n原始返回：\n${text}`,
+      });
     }
 
     const data = await response.json();
-
-    // 提取模型回复
     const reply = data?.choices?.[0]?.message?.content;
+
     if (!reply) {
       console.error('iFlow 返回数据异常：', data);
-      return res.status(500).json({ error: 'iFlow 返回为空，没有找到 reply' });
+      return res
+        .status(200)
+        .json({ reply: 'iFlow 返回数据格式异常，没有找到回复内容。' });
     }
 
-    // ✅ 关键修改：返回 JSON 对象，前端才能用 res.data.reply 读取
+    // ✅ 正常情况：返回 JSON，前端用 res.data.reply 读取
     return res.status(200).json({ reply });
-
   } catch (error) {
     console.error('调用 iFlow 失败：', error);
-    return res.status(500).json({ error: 'Failed to call iFlow API' });
+    // 同样返回 200，把错误栈信息显示出来，方便你排查
+    return res
+      .status(200)
+      .json({ reply: `后端运行异常：${String(error)}` });
   }
 }
