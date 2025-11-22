@@ -10,8 +10,14 @@ const system_prompt = `你是一名材料与化工专业的科研助理（材料
 语言：中文。`;
 
 export default async function handler(req, res) {
+  // 只允许 POST
   if (req.method !== 'POST') {
-    return res.status(405).end();
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  // 没有配置 key 的情况直接报错，避免上游一堆奇怪错误
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'IFLOW_API_KEY 未配置' });
   }
 
   try {
@@ -31,19 +37,20 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
+        'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         model: MODEL,
         messages: messagesForAI,
-        temperature: 0.7
-      })
+        temperature: 0.7,
+      }),
     });
 
-    // 如果上游报错，完整返回错误信息
+    // 如果上游报错，完整返回错误信息，方便你在 Vercel Logs 里看
     if (!response.ok) {
       const text = await response.text();
-      return res.status(500).send(`上游 iFlow API 错误：${text}`);
+      console.error('iFlow API error:', text);
+      return res.status(500).json({ error: `上游 iFlow API 错误：${text}` });
     }
 
     const data = await response.json();
@@ -51,15 +58,15 @@ export default async function handler(req, res) {
     // 提取模型回复
     const reply = data?.choices?.[0]?.message?.content;
     if (!reply) {
-      return res.status(500).send("iFlow 返回为空，没有找到 reply");
+      console.error('iFlow 返回数据异常：', data);
+      return res.status(500).json({ error: 'iFlow 返回为空，没有找到 reply' });
     }
 
-    // 重点：直接返回字符串（你的前端才能显示）
-    return res.status(200).send(reply);
+    // ✅ 关键修改：返回 JSON 对象，前端才能用 res.data.reply 读取
+    return res.status(200).json({ reply });
 
   } catch (error) {
-    console.error(error);
+    console.error('调用 iFlow 失败：', error);
     return res.status(500).json({ error: 'Failed to call iFlow API' });
   }
 }
-
