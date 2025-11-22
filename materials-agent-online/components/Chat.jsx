@@ -23,15 +23,17 @@ export default function Chat() {
 
     const newMessages = [...messages, { role: "user", content }];
     setMessages(newMessages);
-    setInput(""); // 清空输入框
+    setInput("");
     setLoading(true);
 
     try {
-  const res = await axios.post(
-  "/api/chat",
-  { messages: newMessages },
-  { headers: { "Content-Type": "application/json" } }
-);
+      // ✅ 加上 headers，确保 Vercel 上 req.body 能解析到
+      const res = await axios.post(
+        "/api/chat",
+        { messages: newMessages },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
       setMessages([
         ...newMessages,
         { role: "assistant", content: res.data.reply },
@@ -44,46 +46,63 @@ export default function Chat() {
           err.response.data
         )}`;
       }
-      setMessages([
-        ...newMessages,
-        { role: "assistant", content: msg },
-      ]);
+      setMessages([...newMessages, { role: "assistant", content: msg }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="chat-box" style={{ padding: 20 }}>
-      <h2>材料与化工智能助理</h2>
-      <p style={{ color: "#555" }}>
-        你好，我是 MOF 实验智能助理，请尽量详细告诉我配体、金属盐、溶剂、温度和时间 😊
-      </p>
+    <div
+      className="chat-wrapper"
+      style={{ maxWidth: 960, margin: "32px auto", padding: "0 16px" }}
+    >
+      {/* 顶部标题区域 */}
+      <div style={{ marginBottom: 12 }}>
+        <h2 style={{ marginBottom: 4 }}>材料与化工智能助理</h2>
+        <p style={{ color: "#555", fontSize: 14 }}>
+          适用于 MOF 合成、发光材料、配体设计等问题。尽量写清楚金属盐、配体、溶剂、温度和时间哦 😊
+        </p>
+      </div>
 
-      {/* ✅ 快捷提问按钮 */}
+      {/* 快捷问题按钮 */}
       <div
         style={{
           display: "flex",
           flexWrap: "wrap",
           gap: 8,
-          margin: "8px 0 12px",
+          marginBottom: 12,
         }}
       >
         <button
+          className="quick-btn"
           onClick={() =>
-            send("使用尿酸 (Uric Acid) 与三苯基氰杂环 (TCNQ) 合成 Urea-TCNQ MOF 的具体条件？")
+            send(
+              "使用尿酸 (Uric Acid) 与三苯基氰杂环 (TCNQ) 合成 Urea-TCNQ MOF，推荐给出一个可行的溶剂、温度、时间和浓度范围。"
+            )
           }
         >
           Urea-TCNQ MOF 合成
         </button>
-        <button onClick={() => send("我想优化 MOF 蓝光发射性能，应该从哪些配体和金属入手？")}>
+        <button
+          className="quick-btn"
+          onClick={() =>
+            send("我想设计一个蓝光发射的 MOF，请从金属中心和配体结构两个角度给一些建议。")
+          }
+        >
           蓝光发射 MOF 设计
         </button>
-        <button onClick={() => send("我的 MOF 晶体老是长不出来，可能有哪些原因？")}>
+        <button
+          className="quick-btn"
+          onClick={() =>
+            send("我的 MOF 晶体老是长不出来或只有粉末，帮我分析 3~5 个常见原因和排查思路。")
+          }
+        >
           晶体长不出来排查
         </button>
       </div>
 
+      {/* 对话区域 */}
       <div
         style={{
           minHeight: 300,
@@ -93,6 +112,7 @@ export default function Chat() {
           border: "1px solid #f0f0f0",
           borderRadius: 8,
           background: "#fbfcff",
+          boxShadow: "0 8px 20px rgba(15, 23, 42, 0.03)",
         }}
       >
         {messages.map((m, i) => (
@@ -101,7 +121,7 @@ export default function Chat() {
             className={"message " + (m.role === "user" ? "user" : "assistant")}
             style={{ margin: "10px 0" }}
           >
-            <div style={{ fontSize: 12, color: "#888" }}>
+            <div style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>
               {m.role === "user" ? "你" : "助理"}
             </div>
             <div
@@ -111,16 +131,19 @@ export default function Chat() {
                 borderRadius: 8,
                 background: m.role === "user" ? "#dfefff" : "#fff",
                 maxWidth: "90%",
-                whiteSpace: "pre-wrap", // ✅ 支持多行
+                whiteSpace: "pre-wrap", // 支持多行+换行
+                lineHeight: 1.6,
+                fontSize: 14,
               }}
             >
               {m.content}
             </div>
           </div>
         ))}
-        <div ref={bottomRef}></div>
+        <div ref={bottomRef} />
       </div>
 
+      {/* 输入区域 */}
       <div style={{ display: "flex", marginTop: 12 }}>
         <input
           value={input}
@@ -134,14 +157,23 @@ export default function Chat() {
             padding: 10,
             borderRadius: 6,
             border: "1px solid #ccc",
+            fontSize: 14,
           }}
         />
         <button
           onClick={() => send()}
           disabled={loading}
-          style={{ marginLeft: 8, padding: "10px 16px" }}
+          style={{
+            marginLeft: 8,
+            padding: "10px 16px",
+            borderRadius: 6,
+            border: "none",
+            background: loading ? "#ccc" : "#1677ff",
+            color: "#fff",
+            cursor: loading ? "default" : "pointer",
+          }}
         >
-          {loading ? "..." : "发送"}
+          {loading ? "…" : "发送"}
         </button>
       </div>
     </div>
