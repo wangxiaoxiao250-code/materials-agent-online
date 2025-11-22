@@ -27,7 +27,11 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const res = await axios.post("/api/chat", { messages: newMessages });
+  const res = await axios.post(
+  "/api/chat",
+  { messages: newMessages },
+  { headers: { "Content-Type": "application/json" } }
+);
       setMessages([
         ...newMessages,
         { role: "assistant", content: res.data.reply },
