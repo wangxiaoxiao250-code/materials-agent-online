@@ -4,3 +4,15 @@ body { font-family: Inter, Arial, sans-serif; margin: 0; padding: 20px; backgrou
 .message.user { text-align: right; }
 .message.assistant { text-align: left; }
 input, button { font-size: 14px; }
+.quick-btn {
+  border-radius: 999px;
+  border: 1px solid #d0e2ff;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #eff5ff;
+  cursor: pointer;
+}
+
+.quick-btn:hover {
+  background: #e0ecff;
+}
